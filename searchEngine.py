@@ -33,7 +33,7 @@ class crawler:
 		if self.isindexed(url):
 			return
 		print('Indexing %s' % url)
-
+		
 		# 获取每个单词
 		text=self.gettextonly(soup)
 		words=self.separatewords(text)
@@ -48,7 +48,7 @@ class crawler:
 				continue
 			wordid=self.getentryid('wordlist','word',word)
 			self.con.execute("insert into wordlocation(urlid,wordid,location) values (%d %d %d)" % (urlid,wordid,i))
-
+		
 
 	# 从一个HTML网页中提取文字，不带标签的
 	def gettextonly(self,soup):
@@ -93,6 +93,7 @@ class crawler:
 				self.addtoindex(page,soup)
 
 				links=soup('a')
+				print links
 				for link in links:
 					if ('href' in dict(link.attrs)):
 						url=urljoin(page,link['href'])
@@ -111,10 +112,10 @@ class crawler:
 	def createindextables(self):
 		self.con=self.conn.cursor()
 		self.con.execute('create table urlist(url varchar(60))')
-		self.con.execute('create table wordlist(word text(1024))')
+		self.con.execute('create table wordlist(word text(512))')
 		self.con.execute('create table wordlocation(urlid varchar(32),wordid varchar(32),location varchar(64))')
 		self.con.execute('create table link(fromid int(24),toid int(24))')
-		self.con.execute('create index wordidx on wordlist(word(1024))')
+		self.con.execute('create index wordidx on wordlist(word(512))')
 		self.con.execute('create index urlidx on urlist(url(60))')
 		self.con.execute('create index wordurlidx on wordlocation(wordid(24))')
 		self.con.execute('create index urltoidx on link(toid)')
