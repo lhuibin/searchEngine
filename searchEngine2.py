@@ -134,9 +134,57 @@ class crawler:
 		self.__del__()
 
 
+
+class searcher:
+	def __init__(self):
+		self.con=MySQLdb.connect(**connParams)
+		self.conn=self.con.cursor()
+	def __del__(self):
+		self.conn.close()
+		self.con.close()
+
+	def getmatchrows(self,q):
+		# 构造查询的字符串
+		fieldlist='w0.urlid'
+		tablelist=''
+		clauselist=''
+		wordids=[]
+
+		# 根据空格拆分单词
+		words=q.split(' ')
+		tablenumber=0
+		for word in words:
+			# 获取单词的ID
+			self.conn.execute("select rowid from wordlist where word='%s'" % word)
+			wordrow=self.conn.fetchone()
+			#wordrow=self.con.fetchone()
+			if wordrow!=None:
+				wordid=wordrow[0]
+				wordids.append(wordid)
+				if tablenumber>0:
+					tablelist+=','
+					clauselist+=' and '
+					clauselist+='w%d.urlid=w%d.urlid and ' % (tablenumber-1,tablenumber)
+				fieldlist+=',w%d.location' % tablenumber
+				tablelist+='wordlocation w%d' % tablenumber
+				clauselist+='w%d.wordid=%d' % (tablenumber,wordid)
+				tablenumber+=1
+
+		# 根据各个组分，建立查询
+		fullquery='select %s from %s where %s' % (fieldlist,tablelist,clauselist)
+		print fullquery
+		self.conn.execute(fullquery)
+		cur=self.conn.fetchall()
+		rows=[row for row in cur]
+		return rows,wordids
+
+'''
 #pages=['http://www.bbc.com']
 crawler=crawler()
 #crawler.crawl(pages)
 a=crawler.conn.execute('select location from wordlocation where urlid=3')
 b=crawler.conn.fetchall()
 print [row for row in b]
+'''
+e=searcher()
+print e.getmatchrows('bbc news')
