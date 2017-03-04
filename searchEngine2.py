@@ -7,7 +7,7 @@ import MySQLdb
 # 构造一个单词列表，这些单词将被忽略
 ignorewords=(['the','of','to','and','a','in','is','it'])
 # 连接mysql数据库参数
-connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex3')
+connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex5')
 class crawler:
 	# 初始化crawler类并传入数据库
 	def __init__(self):
@@ -69,6 +69,9 @@ class crawler:
 
 	# 如果url已经建立过索引，则返回ture
 	def isindexed(self,url):
+		# 对url中的%进行解码
+		#url=urllib2.unquote(url)
+
 		self.conn.execute("select rowid from urllist where url='%s'" % url)
 		u=self.conn.fetchone()
 		if u!=None:
@@ -109,7 +112,8 @@ class crawler:
 						if url.find("'")!=-1:
 							continue
 						url=url.split('#')[0] # 去掉位置部分
-
+						#if '%' in url:
+						#	url='0000'
 						if url[0:4]=='http' and not self.isindexed(url):
 							newpages.add(url)
 						linkText=self.gettextonly(link)
@@ -119,10 +123,9 @@ class crawler:
 			pages=newpages
 	# 创建数据库表
 	def createindextables(self):
-#		self.con=self.conn.cursor()
-		self.conn.execute('create table urllist(rowid int not null auto_increment primary key, url char(128))')
-		self.conn.execute('create table wordlist(rowid int not null auto_increment primary key, word char(255))')
-		self.conn.execute('create table wordlocation(urlid int, wordid int,location char(128))')
+		self.conn.execute('create table urllist(rowid int not null auto_increment primary key, url varchar(128) CHARACTER SET utf8)')
+		self.conn.execute('create table wordlist(rowid int not null auto_increment primary key, word varchar(255) CHARACTER SET utf8)')
+		self.conn.execute('create table wordlocation(urlid int, wordid int,location int)')
 		self.conn.execute('create table link(rowid int not null auto_increment primary key,fromid int,toid int)')
 		self.conn.execute('create table linkwords(wordid int,linkid int)')
 		self.conn.execute('create index wordidx on wordlist(word)')
@@ -177,7 +180,25 @@ class searcher:
 		cur=self.conn.fetchall()
 		rows=[row for row in cur]
 		return rows,wordids
+	def getscoredlist(self,rows,wordids):
+		totalscores=dict([row[0],0] for row in rows)
 
+		weights=[]
+
+		for (weight,scores) in weights:
+			for url in totalscores:
+				totalscores[url]+=weight*scores[url]
+		return totalscores
+	def geturlname(self,id):
+		self.conn.execute("select url from urllist where rowid=%d" % id)
+		return self.conn.fetchone()
+
+	def query(self,q):
+		rows,wordids=self.getmatchrows(q)
+		scores=self.getscoredlist(rows,wordids)
+		rankescores=sorted([(score,url) for (url,score) in scores.items()],reverse=1)
+		for (score,urlid) in rankescores[0:10]:
+			print '%f\t%s' % (score,self.geturlname(urlid))
 '''
 #pages=['http://www.bbc.com']
 crawler=crawler()
@@ -186,5 +207,6 @@ a=crawler.conn.execute('select location from wordlocation where urlid=3')
 b=crawler.conn.fetchall()
 print [row for row in b]
 '''
+
 e=searcher()
-print e.getmatchrows('bbc news')
+print e.query('Design implementation')
