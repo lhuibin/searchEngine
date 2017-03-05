@@ -205,14 +205,15 @@ class searcher:
 			minscore=min(scores.values())
 			return dict([(u,float(minscore)/max(vsmall,1)) for (u,l) in scores.items()])
 		else:
-			maxscore==0:
-			maxscore=vsmall
+			maxscore=max(scores.values())
+			if maxscore==0:
+				maxscore=vsmall
 			return dict([(u,float(c)/maxscore) for (u,c) in scores.items()])
 		def frequencyscore(self,rows):
 			counts=dict([(row[0],0) for row in rows])
 			for row in rows:
 				counts[row[0]]+=1
-				return self.normalizescores(counts)
+			return self.normalizescores(counts)
 '''
 #pages=['http://www.bbc.com']
 crawler=crawler()
