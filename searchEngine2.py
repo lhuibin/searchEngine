@@ -222,6 +222,7 @@ a=crawler.conn.execute('select location from wordlocation where urlid=3')
 b=crawler.conn.fetchall()
 print [row for row in b]
 '''
-
+'''
 e=searcher()
 print e.query('Design implementation')
+'''
