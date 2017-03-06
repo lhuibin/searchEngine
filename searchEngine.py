@@ -185,7 +185,7 @@ class searcher:
 	def getscoredlist(self,rows,wordids):
 		totalscores=dict([row[0],0] for row in rows)
 
-		weights=[]
+		weights=[(1.0,self.frequencyscore(rows))]
 
 		for (weight,scores) in weights:
 			for url in totalscores:
