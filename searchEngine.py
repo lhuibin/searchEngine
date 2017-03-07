@@ -12,7 +12,7 @@ import MySQLdb
 # 构造一个单词列表，这些单词将被忽略
 ignorewords=(['the','of','to','and','a','in','is','it'])
 # 连接mysql数据库参数
-connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex2')
+connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex')
 class crawler:
 	# 初始化crawler类并传入数据库
 	def __init__(self):
@@ -89,7 +89,18 @@ class crawler:
 
 	# 添加一个关联两个网页的链接
 	def addlinkref(self,urlFrom,urlTo,linkText):
-		pass
+		words=self.separatewords(linkText)
+		fromid=self.getentryid('urllist','url',urlFrom)
+		toid=self.getentryid('urllist','url',urlTo)
+		if fromid==toid:
+			return
+		self.conn.execute("insert into link(fromid,toid) value(%d,%d)" % (fromid,toid))
+		linkid=self.conn.lastrowid
+		for word in words:
+			if word in ignorewords:
+				continue
+			wordid=self.getentryid('wordlist','word',word)
+			self.conn.execute("insert into linkword(wordid,linkid) value(%d,%d)" % (wordid,linkid))
 
 	# 从一小组网页开始进行广度优先搜索，直至某一给定深度，期间为网页建立索引
 	def crawl(self,pages,depth=2):
@@ -261,16 +272,13 @@ class searcher:
 			u_value=self.conn.fetchone()[0]
 			inboundcount[u]=u_value
 		return self.normalizescores(inboundcount)
-'''		
+		
 pages=['http://www.bbc.com']
 crawler=crawler()
 #crawler.createindextables()
 crawler.crawl(pages)
-a=crawler.conn.execute('select location from wordlocation where urlid=3')
-b=crawler.conn.fetchall()
-print [row for row in b]
-'''
 
-e=searcher()
+
+#e=searcher()
 #print e.getmatchrows('bbc news')
-e.query('bbc news')
+#e.query('bbc news')
