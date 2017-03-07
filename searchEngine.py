@@ -1,14 +1,16 @@
 #coding:utf-8
-'''
-1. link and linkword 表无数据
-'''
-
 
 import urllib2
 from BeautifulSoup import *
 from urlparse import urljoin
 import MySQLdb
-
+'''
+错误信息:
+    cur=self.conn.execute("select rowid from %s where %s='%s'" % (table,field,value))
+  File "/usr/lib/python2.7/dist-packages/MySQLdb/cursors.py", line 201, in execute
+    query = query.encode(db.unicode_literal.charset)
+UnicodeEncodeError: 'latin-1' codec can't encode characters in position 56-59: ordinal not in range(256)
+'''
 # 构造一个单词列表，这些单词将被忽略
 ignorewords=(['the','of','to','and','a','in','is','it'])
 # 连接mysql数据库参数
@@ -100,7 +102,7 @@ class crawler:
 			if word in ignorewords:
 				continue
 			wordid=self.getentryid('wordlist','word',word)
-			self.conn.execute("insert into linkword(wordid,linkid) value(%d,%d)" % (wordid,linkid))
+			self.conn.execute("insert into linkwords(wordid,linkid) value(%d,%d)" % (wordid,linkid))
 
 	# 从一小组网页开始进行广度优先搜索，直至某一给定深度，期间为网页建立索引
 	def crawl(self,pages,depth=2):
@@ -128,13 +130,22 @@ class crawler:
 						if url.find("'")!=-1:
 							continue
 						url=url.split('#')[0] # 去掉位置部分
-						#if '%' in url:
-						#	url='0000'
-						if url[0:4]=='http' and not self.isindexed(url):
-							newpages.add(url)
+						'''
+						print('0:',type(url),url)
+						if type(url)==unicode:
+							url1=url
+						elif type(url)==str:
+							url1=url.decode('utf-8')
+						else:
+							url1='null'
+						
+						print('1:',type(url1),url1)
+						'''
+						if url1[0:4]=='http' and not self.isindexed(url1):
+							newpages.add(url1)
 						linkText=self.gettextonly(link)
 
-						self.addlinkref(page,url,linkText)
+						self.addlinkref(page,url1,linkText)
 				self.dbcommit()
 			pages=newpages
 	# 创建数据库表
@@ -200,11 +211,10 @@ class searcher:
 		return rows,wordids
 	def getscoredlist(self,rows,wordids):
 		totalscores=dict([row[0],0] for row in rows)
-		#weights=[(1.0,self.frequencyscore(rows)),
-		#			(1.5,self.locationscore(rows)),
-		#			(1.0,self.distancescore(rows))]
-
-		weights=[(1.0,self.inboundlinkscore(rows))]
+		weights=[(1.0,self.frequencyscore(rows)),
+					(1.5,self.locationscore(rows)),
+					(1.0,self.distancescore(rows)),
+					(1.0,self.inboundlinkscore(rows))]
 
 
 		for (weight,scores) in weights:
@@ -273,12 +283,12 @@ class searcher:
 			inboundcount[u]=u_value
 		return self.normalizescores(inboundcount)
 		
-pages=['http://www.bbc.com']
-crawler=crawler()
+#pages=['http://www.bbc.com']
+#crawler=crawler()
 #crawler.createindextables()
-crawler.crawl(pages)
+#crawler.crawl(pages)
 
 
-#e=searcher()
+e=searcher()
 #print e.getmatchrows('bbc news')
-#e.query('bbc news')
+e.query('bbc news')
