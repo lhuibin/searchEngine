@@ -1,4 +1,9 @@
 #coding:utf-8
+'''
+1. link and linkword 表无数据
+'''
+
+
 import urllib2
 from BeautifulSoup import *
 from urlparse import urljoin
@@ -7,7 +12,7 @@ import MySQLdb
 # 构造一个单词列表，这些单词将被忽略
 ignorewords=(['the','of','to','and','a','in','is','it'])
 # 连接mysql数据库参数
-connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex')
+connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex2')
 class crawler:
 	# 初始化crawler类并传入数据库
 	def __init__(self):
@@ -184,8 +189,12 @@ class searcher:
 		return rows,wordids
 	def getscoredlist(self,rows,wordids):
 		totalscores=dict([row[0],0] for row in rows)
+		#weights=[(1.0,self.frequencyscore(rows)),
+		#			(1.5,self.locationscore(rows)),
+		#			(1.0,self.distancescore(rows))]
 
-		weights=[(1.0,self.frequencyscore(rows))]
+		weights=[(1.0,self.inboundlinkscore(rows))]
+
 
 		for (weight,scores) in weights:
 			for url in totalscores:
@@ -209,7 +218,7 @@ class searcher:
 		vsmall=0.00001 # 避免被零整除
 		if smallIsBetter:
 			minscore=min(scores.values())
-			return dict([(u,float(minscore)/max(vsmall,1)) for (u,l) in scores.items()])
+			return dict([(u,float(minscore)/max(vsmall,l)) for (u,l) in scores.items()])
 		else:
 			maxscore=max(scores.values())
 			if maxscore==0:
@@ -220,15 +229,48 @@ class searcher:
 		for row in rows:
 			counts[row[0]]+=1
 		return self.normalizescores(counts)
-'''
-#pages=['http://www.bbc.com']
+	# 位置搜索
+	def locationscore(self,rows):
+		#print 'rows:',rows
+		locations=dict([(row[0],1000000) for row in rows])
+		for row in rows:
+			loc=sum(row[1:])
+			if loc<locations[row[0]]:
+				locations[row[0]]=loc
+		return self.normalizescores(locations,smallIsBetter=1)
+	# 单词距离
+	def distancescore(self,rows):
+		# 如果仅有一个单词，则得分都一样
+		if len(rows[0])<=2:
+			return dict([(row[0],1.0) for row in rows])
+		# 初始化字典，并填入一个很大的数
+		middistance=dict([(row[0],1000000) for row in rows])
+
+		for row in rows:
+			dist=sum([abs(row[i]-row[i-1]) for i in range(2,len(row))])
+			if dist<middistance[row[0]]:
+				middistance[row[0]]=dist
+		return self.normalizescores(middistance,smallIsBetter=1)
+
+	#外部回指连接-简单计数
+	def inboundlinkscore(self,rows):
+		uniqueurls=set([row[0] for row in rows])
+		inboundcount={}
+		for u in uniqueurls:
+			self.conn.execute("select count(*) from link where toid=%d" % u)
+			u_value=self.conn.fetchone()[0]
+			inboundcount[u]=u_value
+		return self.normalizescores(inboundcount)
+'''		
+pages=['http://www.bbc.com']
 crawler=crawler()
-#crawler.crawl(pages)
+#crawler.createindextables()
+crawler.crawl(pages)
 a=crawler.conn.execute('select location from wordlocation where urlid=3')
 b=crawler.conn.fetchall()
 print [row for row in b]
 '''
-'''
+
 e=searcher()
-print e.query('Design implementation')
-'''
+#print e.getmatchrows('bbc news')
+e.query('bbc news')
