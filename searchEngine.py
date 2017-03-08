@@ -162,7 +162,7 @@ class crawler:
 		self.conn.execute('create index urlfromidx on link(fromid)')
 		self.dbcommit()
 		self.__del__()
-
+	# pagerank计算
 	def calculatepagerank(self,iterations=20):
 		# 清除当前的PageRank表
 		self.conn.execute("drop table if exists pagerank")
@@ -194,6 +194,7 @@ class crawler:
 					pr+=0.85*(linkingpr/linkingcount)
 				self.conn.execute('update pagerank set score=%f where urlid=%d' % (pr,urlid))
 			self.dbcommit()
+
 
 
 
@@ -247,7 +248,9 @@ class searcher:
 		weights=[(1.0,self.frequencyscore(rows)),
 					(1.5,self.locationscore(rows)),
 					(1.0,self.distancescore(rows)),
-					(1.0,self.inboundlinkscore(rows))]
+					(1.0,self.inboundlinkscore(rows)),
+					(1.0,self.pagerankscore(rows))]
+		#weights=[(1.0,self.pagerankscore(rows))]
 
 
 		for (weight,scores) in weights:
@@ -315,6 +318,15 @@ class searcher:
 			u_value=self.conn.fetchone()[0]
 			inboundcount[u]=u_value
 		return self.normalizescores(inboundcount)
+	# 对pagerank做归一化处理
+	def pagerankscore(self,rows):
+		pageranks={}
+		for row in rows:
+			self.conn.execute('select score from pagerank where urlid=%d' row[0])
+			pageranks[row[0]]=self.conn.fetchone()[0]
+		maxrank=max(pageranks.values())
+		normalizescores=dict([(u,float(l)/maxrank) for (u,l) in pageranks.items()])
+		return normalizescores
 		
 #pages=['http://www.bbc.com']
 crawler=crawler()
