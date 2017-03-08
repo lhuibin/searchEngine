@@ -165,28 +165,32 @@ class crawler:
 
 	def calculatepagerank(self,iterations=20):
 		# 清除当前的PageRank表
-		self.conn.execute("drop table i exists pagerank")
-		self.conn.execute("create table pagerank(urlid int not null auto_increment primary key,score deciml(18,2))")
+		self.conn.execute("drop table if exists pagerank")
+		self.conn.execute("create table pagerank(urlid int not null auto_increment primary key,score float)")
 
 		# 初始化每个url，令其PageRank值为1
-		self.conn.execute("insert into pagerank select rowid, 1.0 from rullist")
+		self.conn.execute("insert into pagerank select rowid, 1.0 from urllist")
 		self.dbcommit()
 
 		for i in range(iterations):
 			print("Iteration %d" % (i))
-			for (urlid,) in self.conn.execute('select rowid from urllist'):
+			self.conn.execute('select rowid from urllist')
+			urlid_1=self.conn.fetchall()
+			for (urlid,) in urlid_1:
 				pr=0.15
 
 				# 循环遍历指向当前网页的所有其他网页
-				for (linker,) in self.conn.execute('select distinct fromid from link where toid=%d' % urlid):
+				self.conn.execute('select distinct fromid from link where toid=%d' % urlid)
+				url_fromid=self.conn.fetchall()
+				for (linker,) in url_fromid:
 					# 得到连接源对应网页的PageRank值
 					self.conn.execute("select score from pagerank where urlid=%d" % linker)
 					linkingpr=self.conn.fetchone()[0]
 
 					# 根据连接源，求得总的连接数
 					self.conn.execute("select count(*) from link where fromid=%d" % linker)
-					linkingcount=self.conn.fetchone([0])
-					pr+=0.85(linkingpr/linkingcount)
+					linkingcount=self.conn.fetchone()[0]
+					pr+=0.85*(linkingpr/linkingcount)
 				self.conn.execute('update pagerank set score=%f where urlid=%d' % (pr,urlid))
 			self.dbcommit()
 
@@ -312,11 +316,12 @@ class searcher:
 		return self.normalizescores(inboundcount)
 		
 #pages=['http://www.bbc.com']
-#crawler=crawler()
+crawler=crawler()
+crawler.calculatepagerank()
 #crawler.createindextables()
 #crawler.crawl(pages)
 
 
-e=searcher()
+#e=searcher()
 #print e.getmatchrows('bbc news')
-e.query('bbc news')
+#e.query('bbc news')
