@@ -176,7 +176,9 @@ class crawler:
 			print("Iteration %d" % (i))
 			self.conn.execute('select rowid from urllist')
 			urlid_1=self.conn.fetchall()
+		
 			for (urlid,) in urlid_1:
+			
 				pr=0.15
 
 				# 循环遍历指向当前网页的所有其他网页
@@ -186,7 +188,6 @@ class crawler:
 					# 得到连接源对应网页的PageRank值
 					self.conn.execute("select score from pagerank where urlid=%d" % linker)
 					linkingpr=self.conn.fetchone()[0]
-
 					# 根据连接源，求得总的连接数
 					self.conn.execute("select count(*) from link where fromid=%d" % linker)
 					linkingcount=self.conn.fetchone()[0]
