@@ -245,11 +245,13 @@ class searcher:
 		return rows,wordids
 	def getscoredlist(self,rows,wordids):
 		totalscores=dict([row[0],0] for row in rows)
-		weights=[(1.0,self.frequencyscore(rows)),
-					(1.5,self.locationscore(rows)),
+		
+		weights=[	(1.0,self.frequencyscore(rows)),
+					(1.0,self.locationscore(rows)),
 					(1.0,self.distancescore(rows)),
-					(1.0,self.inboundlinkscore(rows)),
-					(1.0,self.pagerankscore(rows))]
+					(1.0,self.pagerankscore(rows)),
+					(1.0,self.linktextscore(rows,wordids))]
+					
 		#weights=[(1.0,self.pagerankscore(rows))]
 
 
@@ -322,19 +324,32 @@ class searcher:
 	def pagerankscore(self,rows):
 		pageranks={}
 		for row in rows:
-			self.conn.execute('select score from pagerank where urlid=%d' row[0])
+			self.conn.execute('select score from pagerank where urlid=%d' % row[0])
 			pageranks[row[0]]=self.conn.fetchone()[0]
 		maxrank=max(pageranks.values())
 		normalizescores=dict([(u,float(l)/maxrank) for (u,l) in pageranks.items()])
 		return normalizescores
-		
+
+	def linktextscore(self,rows,wordids):
+		linkscores=dict([(row[0],0) for row in rows])
+		for wordid in wordids:
+			self.conn.execute('select link.fromid,link.toid from linkwords,link where wordid=%d and linkwords.linkid=link.rowid' % wordid)
+			cur=self.conn.fetchall()
+			for (fromid,toid) in cur:
+				if toid in linkscores:
+					self.conn.execute('select score from pagerank where urlid=%d' % fromid)
+					pr=self.conn.fetchone()[0]
+					linkscores[toid]+=pr
+			maxscore=max(linkscores.values())
+			normalizedscores=dict([(u,float(l)/maxscore) for (u,l) in linkscores.items()])
+		return normalizedscores	
 #pages=['http://www.bbc.com']
-crawler=crawler()
-crawler.calculatepagerank()
+#crawler=crawler()
+#crawler.calculatepagerank()
 #crawler.createindextables()
 #crawler.crawl(pages)
 
 
-#e=searcher()
+e=searcher()
 #print e.getmatchrows('bbc news')
-#e.query('bbc news')
+e.query('bbc news')
