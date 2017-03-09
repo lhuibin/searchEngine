@@ -5,16 +5,18 @@ from BeautifulSoup import *
 from urlparse import urljoin
 import MySQLdb
 '''
-错误信息:
+错误信息:1
     cur=self.conn.execute("select rowid from %s where %s='%s'" % (table,field,value))
   File "/usr/lib/python2.7/dist-packages/MySQLdb/cursors.py", line 201, in execute
     query = query.encode(db.unicode_literal.charset)
 UnicodeEncodeError: 'latin-1' codec can't encode characters in position 56-59: ordinal not in range(256)
+:2
+查询速度太慢
 '''
 # 构造一个单词列表，这些单词将被忽略
 ignorewords=(['the','of','to','and','a','in','is','it'])
 # 连接mysql数据库参数
-connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex')
+connParams = dict(host='127.0.0.1',user='root',passwd='root',db='searchindex2')
 class crawler:
 	# 初始化crawler类并传入数据库
 	def __init__(self):
@@ -166,7 +168,7 @@ class crawler:
 	def calculatepagerank(self,iterations=20):
 		# 清除当前的PageRank表
 		self.conn.execute("drop table if exists pagerank")
-		self.conn.execute("create table pagerank(urlid int not null auto_increment primary key,score float)")
+		self.conn.execute("create table pagerank(rowid int not null auto_increment primary key,urlid int,score float)")
 
 		# 初始化每个url，令其PageRank值为1
 		self.conn.execute("insert into pagerank select rowid, 1.0 from urllist")
@@ -331,7 +333,7 @@ class searcher:
 		return normalizescores
 
 	def linktextscore(self,rows,wordids):
-		linkscores=dict([(row[0],0) for row in rows])
+		linkscores=dict([(row[0],0.000001) for row in rows])
 		for wordid in wordids:
 			self.conn.execute('select link.fromid,link.toid from linkwords,link where wordid=%d and linkwords.linkid=link.rowid' % wordid)
 			cur=self.conn.fetchall()
